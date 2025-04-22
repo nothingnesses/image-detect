@@ -1,5 +1,5 @@
 {
-  description = "A starter template for Dioxus Desktop apps w/ Tailwind & Nix";
+  description = "Image detection";
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
@@ -43,25 +43,9 @@
           };
         };
 
-        nixpkgs.overlays = [
-          # Configure tailwind to enable all relevant plugins
-          (self: super: {
-            tailwindcss = super.tailwindcss.overrideAttrs
-              (oa: {
-                plugins = [
-                  pkgs.nodePackages."@tailwindcss/aspect-ratio"
-                  pkgs.nodePackages."@tailwindcss/forms"
-                  pkgs.nodePackages."@tailwindcss/language-server"
-                  pkgs.nodePackages."@tailwindcss/line-clamp"
-                  pkgs.nodePackages."@tailwindcss/typography"
-                ];
-              });
-          })
-        ];
-
         rust-project = {
-          crates."dioxus-desktop-template".crane.args = {
-            meta.description = "A starter template for Dioxus Desktop apps w/ Tailwind & Nix";
+          crates."image-detect".crane.args = {
+            meta.description = "Image detection";
             buildInputs = lib.optionals pkgs.stdenv.isLinux
               (with pkgs; [
                 webkitgtk_4_1
@@ -78,20 +62,18 @@
             nativeBuildInputs = with pkgs;[
               pkg-config
               makeWrapper
-              tailwindcss
               dioxus-cli
             ];
           };
           src = lib.cleanSourceWith {
             src = inputs.self; # The original, unfiltered source
             filter = path: type:
-              (lib.hasSuffix "\.html" path) ||
-              (lib.hasSuffix "tailwind.config.js" path) ||
+              (lib.hasSuffix "\.html" path)
+              || (lib.hasSuffix "uno.config.ts" path)
               # Example of a folder for images, icons, etc
-              (lib.hasInfix "/assets/" path) ||
-              (lib.hasInfix "/css/" path) ||
+              || (lib.hasInfix "/assets/" path)
               # Default filter from crane (allow .rs files)
-              (config.rust-project.crane-lib.filterCargoSources path type)
+              || (config.rust-project.crane-lib.filterCargoSources path type)
             ;
           };
         };
@@ -115,13 +97,18 @@
         });
 
         devShells.default = pkgs.mkShell {
-          name = "dioxus-desktop-template";
+          name = "image-detect";
           inputsFrom = [
             config.treefmt.build.devShell
             self'.devShells.rust
           ];
           packages = with pkgs; [
             just
+            nodejs
+            pnpm
+            wasm-bindgen-cli
+            pueue
+            jq
           ];
           shellHook = ''
             echo

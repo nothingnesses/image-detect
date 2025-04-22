@@ -1,0 +1,64 @@
+default:
+    @just --list
+
+# Auto-format the source tree
+fmt:
+    dx fmt -f src/main.rs
+    # Run treefmt *after* 'dx fmt' because the latter rewrites the former!
+    treefmt
+
+dx-serve-web:= 'dx serve --platform web'
+dx-serve-desktop:= 'dx serve --platform desktop'
+pnpm-watch:= 'pnpm dlx @unocss/cli src/**/*.rs -o assets/styling/uno.css -w'
+
+_start-pueued:
+    #!/usr/bin/env sh
+    if ! pgrep pueued >/dev/null; then
+        pueued -d;
+    fi;
+    pueue parallel 0;
+
+_watch command:
+    #!/usr/bin/env sh
+    current_dir="$(pwd)";
+    task_ids="$(pueue status -j | jq -r --arg dir "${current_dir}" '
+        .tasks[]
+        | select(.path == $dir and .command == "{{command}}")
+        | .id
+    ')";
+    if test -n "${task_ids}" ; then
+        echo "${task_ids}" | xargs -n1 pueue restart -i;
+    else
+        pueue add '{{command}}';
+    fi;
+
+# Run the web platform
+watch-web: _start-pueued (_watch pnpm-watch) (_watch dx-serve-web)
+
+# Run the desktop platform
+watch-desktop: _start-pueued (_watch pnpm-watch) (_watch dx-serve-desktop)
+
+status:
+    pueue status
+
+_kill pnpm-watch:
+    #!/usr/bin/env sh
+    current_dir="$(pwd)";
+    task_ids="$(pueue status -j | jq -r --arg dir "${current_dir}" '
+        .tasks[]
+        | .command as $cmd
+        | select(.path == $dir and (["{{dx-serve-web}}", "{{dx-serve-desktop}}", "{{pnpm-watch}}"] | index($cmd) != null))
+        | .id
+    ')";
+    if [ -n "${task_ids}" ]; then
+        echo "${task_ids}" | xargs -n1 pueue kill;
+    fi;
+
+# Kill tasks spawned in "watch"
+kill: (_kill pnpm-watch)
+
+# CI=true for https://github.com/tauri-apps/tauri/issues/3055#issuecomment-1624389208)
+bundle $CI="true":
+    # HACK (change PWD): Until https://github.com/DioxusLabs/dioxus/issues/1283
+    cd assets && dx bundle 
+    nix run nixpkgs#lsd -- --tree ./dist/bundle/macos/dioxus-desktop-template.app
