@@ -7,3 +7,6 @@ pub use hero::Hero;
 
 mod echo;
 pub use echo::Echo;
+
+mod api_key_input;
+pub use api_key_input::APIKeyInput;
