@@ -10,3 +10,6 @@ pub use echo::Echo;
 
 mod api_key_input;
 pub use api_key_input::APIKeyInput;
+
+mod openrouter_output;
+pub use openrouter_output::OpenRouterOutput;

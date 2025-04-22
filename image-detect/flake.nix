@@ -50,6 +50,12 @@
               (with pkgs; [
                 webkitgtk_4_1
                 xdotool
+                atkmm
+                cairo
+                gdk-pixbuf
+                glib
+                gtk3
+                pango
               ]) ++ lib.optionals pkgs.stdenv.isDarwin (
               with pkgs.darwin.apple_sdk.frameworks; [
                 IOKit
@@ -63,6 +69,7 @@
               pkg-config
               makeWrapper
               dioxus-cli
+              openssl
             ];
           };
           src = lib.cleanSourceWith {
